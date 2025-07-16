@@ -1,24 +1,366 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <base target="_top">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Maplibre core CSS/JS -->
+    <script src="https://unpkg.com/maplibre-gl@^5.6.1/dist/maplibre-gl.js"></script>
+    <link
+      href="https://unpkg.com/maplibre-gl@^5.6.1/dist/maplibre-gl.css"
+      rel="stylesheet"
+    />
     <title>Maplibre Example</title>
 
     <style>
-    </style>
-</head>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
 
-<body>
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+
+      .map-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+      }
+
+      .map-overlay fieldset {
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .map-overlay input[type="radio"],
+      .map-overlay input[type="checkbox"] {
+        margin-right: 5px;
+      }
+
+      .map-overlay label {
+        display: block;
+        margin-bottom: 5px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map">
+      <div class="map-overlay">
+        <fieldset>
+          <legend>Basemaps</legend>
+          <label
+            ><input type="radio" name="basemap" value="googleHybrid" checked />
+            Google Hybrid</label
+          >
+          <label
+            ><input type="radio" name="basemap" value="OSM" />
+            OpenStreetMap</label
+          >
+          <label><input type="radio" name="basemap" value="ESRI" /> ESRI</label>
+          <label
+            ><input type="radio" name="basemap" value="cartoLight" /> Carto
+            Light</label
+          >
+          <label
+            ><input type="radio" name="basemap" value="cartoDark" /> Carto
+            Dark</label
+          >
+        </fieldset>
+        <fieldset style="margin-top: 10px">
+          <legend>Layers</legend>
+          <label
+            ><input type="checkbox" id="toggleMarkers" checked /> Markers</label
+          >
+          <label
+            ><input type="checkbox" id="toggleDistricts" checked /> Districts
+            GeoJSON</label
+          >
+        </fieldset>
+      </div>
+    </div>
 
     <script>
+      const googleHybrid = "./basemap/ghyb.json";
+      const basemapStyles = {
+        googleHybrid: "./basemap/ghyb.json",
+        OSM: "./basemap/osm.json",
+        ESRI: "./basemap/esri.json",
+        cartoLight: "./basemap/cartoLight.json",
+        cartoDark: "./basemap/cartoDark.json",
+      };
 
+      const map = new maplibregl.Map({
+        container: "map",
+        style: basemapStyles.googleHybrid,
+        center: [100.5784086, 13.8455641],
+        zoom: 12,
+      });
 
+      const markerData = [
+        {
+          coords: [100.5784086, 13.8455641],
+          popup:
+            "<b>สำนักงานการวิจัยแห่งชาติ (วช.)</b><br/>196 ถ. พหลโยธิน แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร 10900",
+        },
+        {
+          coords: [100.574267, 13.84567],
+          popup:
+            "<b>คณะวนศาสตร์ มหาวิทยาลัยเกษตรศาสตร์</b><br/>50 ถ. พหลโยธิน แขวงลาดยาว เขตจตุจักร กรุงเทพมหานคร 10900",
+        },
+        {
+          coords: [100.5820885, 13.849543],
+          popup:
+            "<b>กรมวิทยาศาสตร์ทหารบก</b><br/>2398/80 ถ. พหลโยธิน แขวงเสนานิคม เขตจตุจักร กรุงเทพมหานคร 10900",
+        },
+        {
+          coords: [100.40828979212644, 13.6709446670883],
+          popup:
+            "<b>แม็คโคร บางบอน</b><br/>210 ถ. กาญจนาภิเษก แขวงคลองบางพราน เขตบางบอน กรุงเทพมหานคร 10150",
+        },
+        {
+          coords: [100.40699726959333, 13.66350398204581],
+          popup:
+            "<b>โรงพยาบาลบางปะกอก 8</b><br/>1055 ถ. เอกชัย แขวงคลองบางบอน เขตบางบอน กรุงเทพมหานคร 10150",
+        },
+      ];
 
+      markerData.forEach(({ coords, popup }) => {
+        const marker = new maplibregl.Marker()
+          .setLngLat(coords)
+          .setPopup(
+            new maplibregl.Popup({ offset: 25 }) // Optional: offset for better positioning
+              .setHTML(popup)
+          )
+          .addTo(map);
+      });
+
+      let geojson;
+      fetch("./district.geojson")
+        .then((r) => r.json())
+        .then((data) => {
+          console.log(data);
+          geojson = data;
+          map.addSource("districts", {
+            type: "geojson",
+            data: geojson,
+          });
+
+          map.addLayer({
+            id: "districts-fill",
+            type: "fill",
+            source: "districts",
+            paint: {
+              "fill-color": "#088",
+              "fill-opacity": 0.4,
+            },
+          });
+
+          map.addLayer({
+            id: "districts-outline",
+            type: "line",
+            source: "districts",
+            paint: {
+              "line-color": "#000",
+              "line-width": 1,
+            },
+          });
+        })
+        .catch((err) => console.error("GeoJSON load error:", err));
+
+      map.on("click", "districts-fill", (e) => {
+        const feature = e.features[0];
+        const p = feature.properties;
+
+        const popupContent = `
+              <strong>ชื่อเขต :</strong> ${p.dname || "–"}<br>
+              <strong>พื้นที่ :</strong> ${p.area || "–"}<br>
+              <strong>รหัสไปรษณีย์ :</strong> ${p.pcode || "–"}<br>
+              <strong>จำนวนประชากรผู้ชาย :</strong> ${p.num_male || "–"}<br>
+              <strong>จำนวนประชากรผู้หญิง :</strong> ${p.num_female || "–"}<br>
+              <strong>จำนวนวัด :</strong> ${p.num_temple || "–"}
+          `;
+
+        new maplibregl.Popup()
+          .setLngLat(e.lngLat)
+          .setHTML(popupContent)
+          .addTo(map);
+      });
+
+      map.on("mouseenter", "districts-fill", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      map.on("mouseleave", "districts-fill", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      const currentMarkers = [];
+      function addMarkers() {
+        markerData.forEach(({ coords, popup }) => {
+          const marker = new maplibregl.Marker().setLngLat(coords).addTo(map);
+
+          marker.getElement().addEventListener("click", (e) => {
+            e.stopPropagation();
+            new maplibregl.Popup({ offset: 25 })
+              .setLngLat(coords)
+              .setHTML(popup)
+              .addTo(map);
+          });
+          currentMarkers.push(marker);
+        });
+      }
+
+      function removeMarkers() {
+        currentMarkers.forEach((marker) => marker.remove());
+        currentMarkers.length = 0;
+      }
+
+      function reAddMarkers() {
+        removeMarkers();
+        if (document.getElementById("toggleMarkers").checked) {
+          addMarkers();
+        }
+      }
+
+      let cachedDistrictGeoJSON = null;
+
+      function addDistrictsLayer() {
+        const visibilityCheckbox = document.getElementById("toggleDistricts");
+        const visibility = visibilityCheckbox.checked ? "visible" : "none";
+
+        const addLayers = (geojson) => {
+          if (map.getSource("districts")) return;
+
+          map.addSource("districts", {
+            type: "geojson",
+            data: geojson,
+          });
+
+          map.addLayer({
+            id: "districts-fill",
+            type: "fill",
+            source: "districts",
+            paint: {
+              "fill-color": "#088",
+              "fill-opacity": 0.4,
+            },
+            layout: {
+              visibility: visibility,
+            },
+          });
+
+          map.addLayer({
+            id: "districts-outline",
+            type: "line",
+            source: "districts",
+            paint: {
+              "line-color": "#000",
+              "line-width": 1,
+            },
+            layout: {
+              visibility: visibility,
+            },
+          });
+
+          // Re-attach events
+          map.on("click", "districts-fill", (e) => {
+            const feature = e.features[0];
+            const p = feature.properties;
+
+            const popupContent = `
+                        <strong>ชื่อเขต :</strong> ${p.dname || "–"}<br>
+                        <strong>พื้นที่ :</strong> ${p.area || "–"}<br>
+                        <strong>รหัสไปรษณีย์ :</strong> ${p.pcode || "–"}<br>
+                        <strong>จำนวนประชากรผู้ชาย :</strong> ${
+                          p.num_male || "–"
+                        }<br>
+                        <strong>จำนวนประชากรผู้หญิง :</strong> ${
+                          p.num_female || "–"
+                        }<br>
+                        <strong>จำนวนวัด :</strong> ${p.num_temple || "–"}
+                    `;
+
+            new maplibregl.Popup()
+              .setLngLat(e.lngLat)
+              .setHTML(popupContent)
+              .addTo(map);
+          });
+
+          map.on("mouseenter", "districts-fill", () => {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", "districts-fill", () => {
+            map.getCanvas().style.cursor = "";
+          });
+        };
+
+        if (cachedDistrictGeoJSON) {
+          addLayers(cachedDistrictGeoJSON);
+        } else {
+          fetch("./district.geojson")
+            .then((r) => r.json())
+            .then((data) => {
+              cachedDistrictGeoJSON = data;
+              addLayers(data);
+            })
+            .catch((err) => console.error("GeoJSON load error:", err));
+        }
+      }
+
+      map.on("style.load", () => {
+        reAddMarkers();
+        addDistrictsLayer();
+      });
+
+      // Basemap change logic
+      document.querySelectorAll('input[name="basemap"]').forEach((radio) => {
+        radio.addEventListener("change", (event) => {
+          const styleName = event.target.value;
+          map.setStyle(basemapStyles[styleName]);
+
+          map.once("styledata", () => {
+            reAddMarkers();
+            addDistrictsLayer();
+          });
+        });
+      });
+
+      document
+        .getElementById("toggleMarkers")
+        .addEventListener("change", (event) => {
+          if (event.target.checked) {
+            addMarkers();
+          } else {
+            removeMarkers();
+          }
+        });
+
+      document
+        .getElementById("toggleDistricts")
+        .addEventListener("change", (event) => {
+          const visibility = event.target.checked ? "visible" : "none";
+          if (map.getLayer("districts-fill")) {
+            map.setLayoutProperty("districts-fill", "visibility", visibility);
+          }
+          if (map.getLayer("districts-outline")) {
+            map.setLayoutProperty(
+              "districts-outline",
+              "visibility",
+              visibility
+            );
+          }
+        });
     </script>
-</body>
-
+  </body>
 </html>
